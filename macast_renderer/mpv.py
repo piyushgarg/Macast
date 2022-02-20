@@ -53,11 +53,12 @@ class MPVRenderer(Renderer):
         super(MPVRenderer, self).__init__(lang)
         global _
         _ = lang
-        mpv_rand = random.randint(0, 9999)
+        #mpv_rand = random.randint(0, 9999)
         if os.name == 'nt':
             self.mpv_sock = Setting.get_base_path(r"\\.\pipe\macast_mpvsocket{}".format(mpv_rand))
         else:
-            self.mpv_sock = '/tmp/macast_mpvsocket{}'.format(mpv_rand)
+            #self.mpv_sock = '/tmp/macast_mpvsocket{}'.format(mpv_rand)
+            self.mpv_sock = '/tmp/macast_mpvsocket'
         self.path = path
         self.proc = None
         self.title = Setting.get_friendly_name()
@@ -276,7 +277,8 @@ class MPVRenderer(Renderer):
             logger.error("mpv ipc is already runing")
             return
         self.ipc_running = True
-        while self.ipc_running and self.running and self.mpv_thread.is_alive():
+        while self.ipc_running and self.running:
+        # and self.mpv_thread.is_alive():
             try:
                 time.sleep(0.5)
                 logger.error("mpv ipc socket start connect")
@@ -331,27 +333,27 @@ class MPVRenderer(Renderer):
         """Start mpv thread
         """
         error_time = 3
-        while self.running and error_time > 0:
+        while self.running and error_time > 0 and Setting.is_service_running():
             self.set_state_speed('1')
             # mpv default params
             params = [
                 self.path,
                 '--input-ipc-server={}'.format(self.mpv_sock),
-                '--image-display-duration=inf',
-                '--idle=yes',
-                '--no-terminal',
-                '--on-all-workspaces',
-                '--hwdec=yes',
-                '--save-position-on-quit=yes',
-                '--script-opts=osc-timetotal=yes,osc-layout=bottombar,' +
-                'osc-title=${title},osc-showwindowed=yes,' +
-                'osc-seekbarstyle=bar,osc-visibility=auto'
+                '--image-display-duration=inf'
+                #'--idle=yes',
+                #'--no-terminal',
+                #'--on-all-workspaces',
+                #'--hwdec=yes',
+                #'--save-position-on-quit=yes',
+                #'--script-opts=osc-timetotal=yes,osc-layout=bottombar,' +
+                #'osc-title=${title},osc-showwindowed=yes,' +
+                #'osc-seekbarstyle=bar,osc-visibility=auto'
             ]
 
             ontop = Setting.get(SettingProperty.PlayerOntop,
                                 default=SettingProperty.PlayerOntop_True.value)
-            if ontop:
-                params.append('--ontop')
+            #if ontop:
+            #    params.append('--ontop')
 
             # set player position
             player_position = Setting.get(SettingProperty.PlayerPosition,
@@ -378,8 +380,8 @@ class MPVRenderer(Renderer):
                     int(15 - 2.5 * player_size + 7.5 * player_size ** 2)))
             elif player_size == SettingProperty.PlayerSize_Auto.value:
                 params.append('--autofit-larger=90%')
-            elif player_size == SettingProperty.PlayerSize_FullScreen.value:
-                params.append('--fullscreen')
+            #elif player_size == SettingProperty.PlayerSize_FullScreen.value:
+            #    params.append('--fullscreen')
 
             # set darwin only options
             if sys.platform == 'darwin':
@@ -428,8 +430,9 @@ class MPVRenderer(Renderer):
         super(MPVRenderer, self).start()
         logger.info("starting mpv and mpv ipc")
         self.mpv_thread = threading.Thread(target=self.start_mpv, name="MPV_THREAD")
-        self.mpv_thread.start()
+        #self.mpv_thread.start()
         self.ipc_thread = threading.Thread(target=self.start_ipc, name="MPV_IPC_THREAD")
+        self.ipc_thread.setDaemon(True)
         self.ipc_thread.start()
 
     def stop(self):
@@ -438,17 +441,17 @@ class MPVRenderer(Renderer):
         super(MPVRenderer, self).stop()
         logger.info("stoping mpv and mpv ipc")
         # stop mpv
-        self.send_command(['quit'])
-        if self.proc is not None:
-            self.proc.terminate()
-        try:
-            os.waitpid(-1, 1)
-        except Exception as e:
-            logger.error(e)
-        self.mpv_thread.join()
+        # self.send_command(['quit'])
+        #if self.proc is not None:
+        #    self.proc.terminate()
+        #try:
+        #    os.waitpid(-1, 1)
+        #except Exception as e:
+        #    logger.error(e)
+        #self.mpv_thread.join()
         # stop mpv ipc
         self.ipc_running = False
-        self.ipc_thread.join()
+        # self.ipc_thread.join()
 
     def reload(self):
         """Reload MPV
